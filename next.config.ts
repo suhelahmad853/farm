@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // PDF libraries run on the server as plain Node packages.
+  serverExternalPackages: ["jspdf", "jspdf-autotable"],
 };
 
 export default nextConfig;
