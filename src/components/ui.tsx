@@ -11,7 +11,7 @@ export const btnSecondary =
 
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3 print:hidden">
       <div>
         <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">{title}</h1>
         {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
@@ -63,18 +63,18 @@ export function Badge({ children, tone }: { children: ReactNode; tone: "green" |
 
 export function Table({ head, children, empty, foot }: { head: string[]; children: ReactNode; empty?: boolean | string; foot?: ReactNode }) {
   return (
-    <div className="-mx-4 overflow-x-auto sm:mx-0">
-      <table className="w-full min-w-[640px] text-left text-sm">
+    <div className="-mx-4 overflow-x-auto sm:mx-0 print:mx-0 print:overflow-visible">
+      <table className="w-full min-w-[640px] text-left text-sm print:min-w-0 print:text-xs">
         <thead>
           <tr className="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
             {head.map((h) => (
-              <th key={h} className="px-4 py-2 font-medium sm:px-3">{h}</th>
+              <th key={h} className={`px-4 py-2 font-medium sm:px-3 ${h === "" ? "print:hidden" : ""}`}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 [&_td]:px-4 [&_td]:py-2.5 sm:[&_td]:px-3">{children}</tbody>
         {foot && !empty && (
-          <tfoot className="border-t-2 border-slate-200 bg-slate-50 font-semibold text-slate-900 [&_td]:px-4 [&_td]:py-2.5 sm:[&_td]:px-3">
+          <tfoot className="border-t-2 border-slate-200 bg-slate-50 print:bg-transparent font-semibold text-slate-900 [&_td]:px-4 [&_td]:py-2.5 sm:[&_td]:px-3">
             {foot}
           </tfoot>
         )}

@@ -34,12 +34,14 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
   return (
     <>
       <PageHeader title="Sell" subtitle="Sales reduce stock. Unpaid amount is added to the customer's pending." />
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[400px_minmax(0,1fr)]">
-        <Card title="New sale">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[400px_minmax(0,1fr)] print:block">
+        <Card title="New sale" className="print:hidden">
           <SaleForm action={addSale} customers={customerOptions} stock={stock} today={todayIST()} />
         </Card>
 
-        <Card title={`Sales · ${range.label}`}>
+        <Card title={`Sales · ${range.label}`} className="print:border-0 print:p-0 print:shadow-none">
+          {/* 10 columns: print sideways. Only active while this page is open. */}
+          <style>{"@media print { @page { size: A4 landscape; } }"}</style>
           <RangeFilter range={range} basePath="/vendor/sales" pdfPath="/vendor/sales/pdf" />
           <Table
             head={["Date", "Customer", "Size", "Pcs", "Weight", "Rate", "Total", "Paid", "Pending", ""]}
@@ -53,7 +55,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
                 <td className="tabular-nums">{inr(t.total)}</td>
                 <td className="tabular-nums">{inr(t.paid)}</td>
                 <td className="tabular-nums text-amber-700">{inr(t.pending)}</td>
-                <td />
+                <td className="print:hidden" />
               </tr>
             }
           >
@@ -62,7 +64,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
               return (
                 <tr key={s.id}>
                   <td className="whitespace-nowrap">{fmtDate(s.date)}</td>
-                  <td className="max-w-40 truncate">
+                  <td className="max-w-40 truncate print:max-w-none print:whitespace-normal">
                     {s.customerId ? (
                       <Link href={`/vendor/customers/${s.customerId}`} className="font-medium text-emerald-700 hover:underline">{s.customerName}</Link>
                     ) : (
@@ -78,7 +80,7 @@ export default async function SalesPage({ searchParams }: { searchParams: Promis
                     {inr(num(s.paidAmount))} <span className="text-xs text-slate-500">{MODE_LABEL[s.paymentMode]}</span>
                   </td>
                   <td>{due > 0 ? <Badge tone="amber">{inr(due)}</Badge> : <Badge tone="green">Paid</Badge>}</td>
-                  <td><ActionButton action={deleteSale.bind(null, s.id)} label="Delete" confirmText="Delete this sale?" /></td>
+                  <td className="print:hidden"><ActionButton action={deleteSale.bind(null, s.id)} label="Delete" confirmText="Delete this sale?" /></td>
                 </tr>
               );
             })}

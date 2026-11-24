@@ -1,5 +1,6 @@
 import Form from "next/form";
 import Link from "next/link";
+import { PrintButton } from "./PrintButton";
 import { todayIST } from "@/lib/format";
 import { quickRanges, rangeQuery, type DateRange } from "@/lib/range";
 import { btnPrimary, btnSecondary, inputCls } from "./ui";
@@ -8,7 +9,7 @@ import { btnPrimary, btnSecondary, inputCls } from "./ui";
 export function RangeFilter({ range, basePath, pdfPath }: { range: DateRange; basePath: string; pdfPath: string }) {
   const today = todayIST();
   return (
-    <div className="mb-4 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+    <div className="mb-4 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3 print:hidden">
       <div className="flex flex-wrap items-end gap-2">
         <Form action={basePath} className="flex flex-wrap items-end gap-2">
           <label className="block">
@@ -21,9 +22,12 @@ export function RangeFilter({ range, basePath, pdfPath }: { range: DateRange; ba
           </label>
           <button type="submit" className={btnSecondary}>Apply</button>
         </Form>
-        <a href={`${pdfPath}?${rangeQuery(range)}`} className={`${btnPrimary} sm:ml-auto`} download>
-          Download PDF
-        </a>
+        <div className="flex gap-2 sm:ml-auto">
+          <PrintButton />
+          <a href={`${pdfPath}?${rangeQuery(range)}`} className={btnPrimary} download>
+            Download PDF
+          </a>
+        </div>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {quickRanges(today).map((q) => {

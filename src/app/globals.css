@@ -5,3 +5,13 @@ body {
   color: #0f172a;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
 }
+
+/* Printing: only the report table (see print: classes), on clean A4 pages. */
+@media print {
+  @page { size: A4; margin: 12mm; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  html, body { background: #fff !important; }
+  tr { break-inside: avoid; }
+  thead { display: table-header-group; }
+  tfoot { display: table-row-group; }
+}

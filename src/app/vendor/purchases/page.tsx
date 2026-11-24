@@ -19,8 +19,8 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
   return (
     <>
       <PageHeader title="Purchase" subtitle="Chicken bought for the farm. Purchases add to stock." />
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[380px_minmax(0,1fr)]">
-        <Card title="Add purchase">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-[380px_minmax(0,1fr)] print:block">
+        <Card title="Add purchase" className="print:hidden">
           <ActionForm action={addPurchase} submitLabel="Save purchase">
             <div className="grid grid-cols-2 gap-3">
               <Field label="Date"><input type="date" name="date" required defaultValue={todayIST()} className={inputCls} /></Field>
@@ -35,7 +35,7 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
           </ActionForm>
         </Card>
 
-        <Card title={`Purchases · ${range.label}`}>
+        <Card title={`Purchases · ${range.label}`} className="print:border-0 print:p-0 print:shadow-none">
           <RangeFilter range={range} basePath="/vendor/purchases" pdfPath="/vendor/purchases/pdf" />
           <Table
             head={["Date", "Size", "Pieces", "Weight", "Rate/kg", "Total", "Supplier", ""]}
@@ -47,7 +47,8 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
                 <td className="whitespace-nowrap tabular-nums">{kg(t.weightKg)}</td>
                 <td />
                 <td className="tabular-nums">{inr(t.total)}</td>
-                <td colSpan={2} />
+                <td />
+                <td className="print:hidden" />
               </tr>
             }
           >
@@ -59,8 +60,8 @@ export default async function PurchasesPage({ searchParams }: { searchParams: Pr
                 <td className="whitespace-nowrap tabular-nums">{kg(num(p.weightKg))}</td>
                 <td className="tabular-nums">{inr(num(p.ratePerKg))}</td>
                 <td className="font-semibold tabular-nums">{inr(num(p.totalAmount))}</td>
-                <td className="max-w-40 truncate" title={p.note ?? undefined}>{p.supplierName ?? "—"}</td>
-                <td><ActionButton action={deletePurchase.bind(null, p.id)} label="Delete" confirmText="Delete this purchase?" /></td>
+                <td className="max-w-40 truncate print:max-w-none print:whitespace-normal" title={p.note ?? undefined}>{p.supplierName ?? "—"}</td>
+                <td className="print:hidden"><ActionButton action={deletePurchase.bind(null, p.id)} label="Delete" confirmText="Delete this purchase?" /></td>
               </tr>
             ))}
           </Table>

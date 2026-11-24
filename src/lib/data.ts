@@ -75,6 +75,13 @@ export function listSales(storeId: number, r: Range) {
   });
 }
 
+export function listExpenses(storeId: number, r: Range) {
+  return prisma.expense.findMany({
+    where: { storeId, date: { gte: r.gte, lte: r.lte } },
+    orderBy: [{ date: "desc" }, { id: "desc" }],
+  });
+}
+
 type Summable = { pieces: number; weightKg: unknown; totalAmount: unknown; paidAmount?: unknown };
 
 /** Totals for a list of purchases or sales. */
