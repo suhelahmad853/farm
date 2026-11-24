@@ -1,46 +1,56 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "./prisma";
 import { num, round2, SIZES, type SizeKey } from "./format";
 
 export type StockRow = { size: SizeKey; pieces: number; weightKg: number };
 
-/** Stock per size = total purchased − total sold. */
+/** Stock per size = total purchased − total sold. One query. */
 export async function getStock(storeId: number): Promise<StockRow[]> {
-  const [bought, sold] = await Promise.all([
-    prisma.purchase.groupBy({ by: ["size"], where: { storeId }, _sum: { pieces: true, weightKg: true } }),
-    prisma.sale.groupBy({ by: ["size"], where: { storeId }, _sum: { pieces: true, weightKg: true } }),
-  ]);
+  const rows = await prisma.$queryRaw<{ size: string; pieces: unknown; kg: unknown }[]>`
+    SELECT size, SUM(pieces) AS pieces, SUM(kg) AS kg FROM (
+      SELECT size, pieces, weight_kg AS kg FROM purchases WHERE store_id = ${storeId}
+      UNION ALL
+      SELECT size, -pieces, -weight_kg FROM sales WHERE store_id = ${storeId}
+    ) t GROUP BY size`;
   return SIZES.map((size) => {
-    const b = bought.find((r) => r.size === size)?._sum;
-    const s = sold.find((r) => r.size === size)?._sum;
-    return {
-      size,
-      pieces: (b?.pieces ?? 0) - (s?.pieces ?? 0),
-      weightKg: round2(num(b?.weightKg) - num(s?.weightKg)),
-    };
+    const r = rows.find((x) => x.size === size);
+    return { size, pieces: num(r?.pieces), weightKg: round2(num(r?.kg)) };
   });
 }
 
-/** Pending amount per customer id = Σ(sale total − paid at sale) − Σ later payments. */
+/** Pending amount per customer id = Σ(sale total − paid at sale) − Σ later payments. One query. */
 export async function getPendingMap(storeId: number, customerId?: number): Promise<Map<number, number>> {
-  const saleWhere = customerId ? { storeId, customerId } : { storeId, customerId: { not: null } };
-  const [sales, payments] = await Promise.all([
-    prisma.sale.groupBy({ by: ["customerId"], where: saleWhere, _sum: { totalAmount: true, paidAmount: true } }),
-    prisma.customerPayment.groupBy({
-      by: ["customerId"],
-      where: customerId ? { storeId, customerId } : { storeId },
-      _sum: { amount: true },
-    }),
-  ]);
-  const map = new Map<number, number>();
-  for (const s of sales) {
-    if (s.customerId == null) continue;
-    map.set(s.customerId, num(s._sum.totalAmount) - num(s._sum.paidAmount));
-  }
-  for (const p of payments) {
-    map.set(p.customerId, (map.get(p.customerId) ?? 0) - num(p._sum.amount));
-  }
-  for (const [k, v] of map) map.set(k, round2(v));
-  return map;
+  const onlyCustomer = customerId ? Prisma.sql`AND customer_id = ${customerId}` : Prisma.empty;
+  const rows = await prisma.$queryRaw<{ customerId: number; pending: unknown }[]>`
+    SELECT customer_id AS customerId, SUM(amt) AS pending FROM (
+      SELECT customer_id, total_amount - paid_amount AS amt FROM sales
+        WHERE store_id = ${storeId} AND customer_id IS NOT NULL ${onlyCustomer}
+      UNION ALL
+      SELECT customer_id, -amount FROM customer_payments WHERE store_id = ${storeId} ${onlyCustomer}
+    ) t GROUP BY customer_id`;
+  return new Map(rows.map((r) => [Number(r.customerId), round2(num(r.pending))]));
+}
+
+export type PeriodTotals = { purchases: number; sales: number; expenses: number; cash: number; online: number };
+
+/**
+ * Dashboard totals for today and for the month, in one query.
+ * Received = paid at sale + later customer payments, split by payment mode.
+ */
+export async function getDashboardTotals(storeId: number, today: string, monthStart: string) {
+  const rows = await prisma.$queryRaw<{ k: string; m: string; today: unknown; month: unknown }[]>`
+    SELECT k, m, SUM(CASE WHEN d >= ${today} THEN a ELSE 0 END) AS today, SUM(a) AS month FROM (
+      SELECT 'P' AS k, '' AS m, date AS d, total_amount AS a FROM purchases WHERE store_id = ${storeId} AND date >= ${monthStart}
+      UNION ALL SELECT 'S', '', date, total_amount FROM sales WHERE store_id = ${storeId} AND date >= ${monthStart}
+      UNION ALL SELECT 'E', '', date, amount FROM expenses WHERE store_id = ${storeId} AND date >= ${monthStart}
+      UNION ALL SELECT 'R', CAST(payment_mode AS CHAR), date, paid_amount FROM sales WHERE store_id = ${storeId} AND date >= ${monthStart}
+      UNION ALL SELECT 'R', CAST(payment_mode AS CHAR), date, amount FROM customer_payments WHERE store_id = ${storeId} AND date >= ${monthStart}
+    ) t GROUP BY k, m`;
+  const pick = (period: "today" | "month"): PeriodTotals => {
+    const v = (k: string, m = "") => round2(num(rows.find((r) => r.k === k && r.m === m)?.[period]));
+    return { purchases: v("P"), sales: v("S"), expenses: v("E"), cash: v("R", "CASH"), online: v("R", "ONLINE") };
+  };
+  return { today: pick("today"), month: pick("month") };
 }
 
 export async function getCustomerPending(storeId: number, customerId: number) {

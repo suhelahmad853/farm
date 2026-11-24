@@ -1,3 +1,4 @@
+import Form from "next/form";
 import Link from "next/link";
 import { todayIST } from "@/lib/format";
 import { quickRanges, rangeQuery, type DateRange } from "@/lib/range";
@@ -9,7 +10,7 @@ export function RangeFilter({ range, basePath, pdfPath }: { range: DateRange; ba
   return (
     <div className="mb-4 space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
       <div className="flex flex-wrap items-end gap-2">
-        <form method="get" action={basePath} className="flex flex-wrap items-end gap-2">
+        <Form action={basePath} className="flex flex-wrap items-end gap-2">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-slate-600">From</span>
             <input type="date" name="from" defaultValue={range.from} required className={`${inputCls} w-40`} />
@@ -19,7 +20,7 @@ export function RangeFilter({ range, basePath, pdfPath }: { range: DateRange; ba
             <input type="date" name="to" defaultValue={range.to} required className={`${inputCls} w-40`} />
           </label>
           <button type="submit" className={btnSecondary}>Apply</button>
-        </form>
+        </Form>
         <a href={`${pdfPath}?${rangeQuery(range)}`} className={`${btnPrimary} sm:ml-auto`} download>
           Download PDF
         </a>

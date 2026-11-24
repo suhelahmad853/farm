@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Card, PageHeader, Stat } from "@/components/ui";
-import { getPendingMap, getStock } from "@/lib/data";
-import { inr, kg, num, round2, SIZE_LABEL, toDbDate, todayIST } from "@/lib/format";
-import { prisma } from "@/lib/prisma";
+import { getDashboardTotals, getPendingMap, getStock } from "@/lib/data";
+import { inr, kg, round2, SIZE_LABEL, toDbDate, todayIST } from "@/lib/format";
 import { requireVendor } from "@/lib/session";
 
 export default async function VendorDashboard() {
@@ -10,37 +9,14 @@ export default async function VendorDashboard() {
   const storeId = store.id;
   const today = todayIST();
   const todayDate = toDbDate(today);
-  const monthStart = toDbDate(today.slice(0, 8) + "01");
 
-  const sumRange = async (from: Date) => {
-    const where = { storeId, date: { gte: from } };
-    const [p, s, e, salesByMode, paymentsByMode] = await Promise.all([
-      prisma.purchase.aggregate({ where, _sum: { totalAmount: true } }),
-      prisma.sale.aggregate({ where, _sum: { totalAmount: true } }),
-      prisma.expense.aggregate({ where, _sum: { amount: true } }),
-      prisma.sale.groupBy({ by: ["paymentMode"], where, _sum: { paidAmount: true } }),
-      prisma.customerPayment.groupBy({ by: ["paymentMode"], where, _sum: { amount: true } }),
-    ]);
-    const collected = (mode: "CASH" | "ONLINE") =>
-      round2(
-        num(salesByMode.find((r) => r.paymentMode === mode)?._sum.paidAmount) +
-          num(paymentsByMode.find((r) => r.paymentMode === mode)?._sum.amount),
-      );
-    return {
-      purchases: num(p._sum.totalAmount),
-      sales: num(s._sum.totalAmount),
-      expenses: num(e._sum.amount),
-      cash: collected("CASH"),
-      online: collected("ONLINE"),
-    };
-  };
-
-  const [stock, pendingMap, todayTotals, monthTotals] = await Promise.all([
+  const [stock, pendingMap, totals] = await Promise.all([
     getStock(storeId),
     getPendingMap(storeId),
-    sumRange(todayDate),
-    sumRange(monthStart),
+    getDashboardTotals(storeId, today, today.slice(0, 8) + "01"),
   ]);
+  const todayTotals = totals.today;
+  const monthTotals = totals.month;
   const totalPending = round2([...pendingMap.values()].reduce((a, b) => a + b, 0));
   const pendingCustomers = [...pendingMap.values()].filter((v) => v > 0).length;
   const monthProfit = round2(monthTotals.sales - monthTotals.purchases - monthTotals.expenses);
